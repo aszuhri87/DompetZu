@@ -4,33 +4,40 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Credit card peaking out of wallet -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M38,36h32c2.2,0 4,1.8 4,4v8H34v-8c0,-2.2 1.8,-4 4,-4z" />
-    <path
-        android:fillColor="#0284C7"
-        android:pathData="M34,42h40v2H34z" />
 
-    <!-- Wallet main body -->
+    <!-- Rear Banknote / Flap (Light Cream Green) -->
     <path
-        android:fillColor="#F8FAFC"
-        android:pathData="M32,44h44c3.3,0 6,2.7 6,6v24c0,3.3 -2.7,6 -6,6H32c-3.3,0 -6,-2.7 -6,-6V50c0,-3.3 2.7,-6 6,-6z" />
-    
-    <!-- Wallet flap and clasp -->
+        android:fillColor="#EAF8EE"
+        android:pathData="M38,23 C48,16 66,16 72,28 L72,40 L30,40 Z" />
     <path
-        android:fillColor="#E2E8F0"
-        android:pathData="M32,44h44c3.3,0 6,2.7 6,6v4H26v-4c0,-3.3 2.7,-6 6,-6z" />
-    <path
-        android:fillColor="#10B981"
-        android:pathData="M64,57h18v12H64c-3.3,0 -6,-2.7 -6,-6s2.7,-6 6,-6z" />
-    <!-- Clasp button (gold coin emblem) -->
-    <path
-        android:fillColor="#FCD34D"
-        android:pathData="M66,63m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+        android:fillColor="#15803D"
+        android:pathData="M30,38 L72,38 L72,40 L30,40 Z" />
 
-    <!-- Rising growth arrow / badge on bottom-left -->
+    <!-- Top Banknote (Vibrant Lime Green) -->
     <path
-        android:fillColor="#10B981"
-        android:pathData="M34,68l6,-6l4,4l8,-8l-2,-2h6v6l-2,-2l-6,6l-4,-4l-6,6z" />
+        android:fillColor="#84E042"
+        android:pathData="M30,30 C48,24 68,26 80,35 L80,44 L26,44 Z" />
+
+    <!-- Main Wallet Body (Cream Light Green) -->
+    <path
+        android:fillColor="#F0FDF4"
+        android:pathData="M26,42 h50 c4.4,0 8,3.6 8,8 v24 c0,4.4 -3.6,8 -8,8 h-50 c-4.4,0 -8,-3.6 -8,-8 v-24 c0,-4.4 3.6,-8 8,-8 z" />
+
+    <!-- Wallet Clasp (Right Flap with Dark Green Button) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,54 h16 c3.3,0 6,2.7 6,6 v4 c0,3.3 -2.7,6 -6,6 h-16 z" />
+    <path
+        android:fillColor="#0D522C"
+        android:pathData="M78,63 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+
+    <!-- Leaf Motif on Bottom-Left Corner (Vibrant Green Leaf) -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M20,78 C20,58 38,52 56,52 C56,70 46,82 20,82 Z" />
+    <!-- Leaf Center Vein (Dark Green) -->
+    <path
+        android:fillColor="#0D522C"
+        android:pathData="M22,80 C32,74 44,66 52,56 C44,68 32,76 22,80 Z" />
+
 </vector>

@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import com.example.ui.components.DompetZuHeaderLogo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -216,12 +217,7 @@ fun MainApp(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "DompetZu",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    DompetZuHeaderLogo()
                 },
                 actions = {
                     // Global Amount Visibility Toggle (Eye icon)
