@@ -1,0 +1,6 @@
+{
+  "name": "DompetZu",
+  "description": "Aplikasi manajemen keuangan pribadi terintegrasi dengan laporan bulanan otomatis, pelacakan anggaran pintar, dan analisis arus kas komprehensif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
