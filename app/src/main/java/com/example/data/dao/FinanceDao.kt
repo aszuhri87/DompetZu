@@ -8,6 +8,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.example.data.model.CategoryBudgetEntity
+import com.example.data.model.SavingsGoalEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionWithDetails
 import kotlinx.coroutines.flow.Flow
@@ -68,4 +69,13 @@ interface FinanceDao {
 
     @Query("DELETE FROM category_budgets WHERE id = :id")
     suspend fun deleteBudgetById(id: Long)
+
+    @Query("SELECT * FROM savings_goals ORDER BY id DESC")
+    fun getAllSavingsGoals(): Flow<List<SavingsGoalEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSavingsGoal(goal: SavingsGoalEntity): Long
+
+    @Query("DELETE FROM savings_goals WHERE id = :id")
+    suspend fun deleteSavingsGoalById(id: Long)
 }

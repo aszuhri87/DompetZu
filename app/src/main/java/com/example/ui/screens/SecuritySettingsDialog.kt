@@ -18,11 +18,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.ui.window.DialogProperties
+import com.example.data.security.ThemeMode
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -72,6 +78,8 @@ enum class SecurityDialogStep {
 @Composable
 fun SecuritySettingsDialog(
     isLockEnabled: Boolean,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     onDismiss: () -> Unit,
     onSetPin: (newPin: String) -> Unit,
     onVerifyPin: (pin: String) -> Boolean,
@@ -88,6 +96,10 @@ fun SecuritySettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .fillMaxWidth(0.92f)
+            .padding(vertical = 16.dp),
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -103,7 +115,7 @@ fun SecuritySettingsDialog(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Keamanan Sandi PIN",
+                        text = "Pengaturan & Keamanan",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -117,6 +129,85 @@ fun SecuritySettingsDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 when (step) {
                     SecurityDialogStep.OVERVIEW -> {
+                        // Theme Selection Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Palette,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Tema Tampilan",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val options = listOf(
+                                        ThemeMode.LIGHT to ("Terang ☀️" to Icons.Default.LightMode),
+                                        ThemeMode.DARK to ("Gelap 🌙" to Icons.Default.DarkMode)
+                                    )
+
+                                    options.forEach { (mode, pair) ->
+                                        val (label, icon) = pair
+                                        val isSelected = themeMode == mode
+
+                                        Surface(
+                                            onClick = { onThemeModeChange(mode) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("theme_option_${mode.name.lowercase()}"),
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                            border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = label,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = label,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         // Status Card
                         Card(
                             modifier = Modifier.fillMaxWidth(),

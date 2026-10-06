@@ -14,6 +14,7 @@ import com.example.data.model.AppNotificationEntity
 import com.example.data.model.CategoryBudgetEntity
 import com.example.data.model.CategoryEntity
 import com.example.data.model.RecurringBillEntity
+import com.example.data.model.SavingsGoalEntity
 import com.example.data.model.TransactionEntity
 
 @Database(
@@ -23,9 +24,10 @@ import com.example.data.model.TransactionEntity
         AccountEntity::class,
         CategoryBudgetEntity::class,
         RecurringBillEntity::class,
-        AppNotificationEntity::class
+        AppNotificationEntity::class,
+        SavingsGoalEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

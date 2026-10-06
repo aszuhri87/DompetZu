@@ -91,6 +91,11 @@ fun MonthlyReportScreen(
             )
         }
 
+        // Perhitungan Sisa Uang / Menabung Banner
+        item {
+            MonthlySavingsBanner(report = report)
+        }
+
         // Executive Financial Health Card
         item {
             HealthScoreCard(report = report)
@@ -760,6 +765,99 @@ fun FinancialAdviceCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlySavingsBanner(
+    report: MonthlyReportData,
+    modifier: Modifier = Modifier
+) {
+    val net = report.netCashFlow
+    val formattedAbs = MonthlyReportCalculator.formatRupiah(kotlin.math.abs(net))
+    val formattedIncome = MonthlyReportCalculator.formatRupiah(report.totalIncome)
+    val formattedExpense = MonthlyReportCalculator.formatRupiah(report.totalExpense)
+
+    val isSurplus = net > 0
+    val isDeficit = net < 0
+
+    val titleText = when {
+        isSurplus -> "Yay! Anda berhasil menabung $formattedAbs bulan ini! 🎉"
+        isDeficit -> "Perhatian: Pengeluaran Anda melebihi pemasukan sebesar $formattedAbs bulan ini. ⚠️"
+        else -> "Saldo Pas: Pemasukan dan pengeluaran Anda seimbang pas bulan ini (Rp 0). ⚖️"
+    }
+
+    val subtitleText = when {
+        isSurplus -> "Sisa saldo dari total pemasukan ($formattedIncome) dikurangi pengeluaran ($formattedExpense)."
+        isDeficit -> "Total pengeluaran ($formattedExpense) lebih besar dari total pemasukan ($formattedIncome) bulan ini."
+        else -> "Total pemasukan ($formattedIncome) sama dengan total pengeluaran ($formattedExpense) bulan ini."
+    }
+
+    val containerBg = when {
+        isSurplus -> IncomeGreen.copy(alpha = 0.12f)
+        isDeficit -> ExpenseRed.copy(alpha = 0.12f)
+        else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+    }
+
+    val contentColor = when {
+        isSurplus -> IncomeGreen
+        isDeficit -> ExpenseRed
+        else -> MaterialTheme.colorScheme.primary
+    }
+
+    val icon = when {
+        isSurplus -> Icons.Default.CheckCircle
+        isDeficit -> Icons.Default.Warning
+        else -> Icons.Default.Info
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("monthly_savings_banner"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, contentColor.copy(alpha = 0.35f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(containerBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = titleText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = subtitleText,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

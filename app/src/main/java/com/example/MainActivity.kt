@@ -14,7 +14,12 @@ import com.example.ui.components.DompetZuHeaderLogo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.SettingsBrightness
+import com.example.data.security.ThemeMode
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -80,6 +85,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.screens.AddEditBudgetDialog
 import com.example.ui.screens.AddEditRecurringBillDialog
+import com.example.ui.screens.AddEditSavingsGoalDialog
 import com.example.ui.screens.AddEditTransactionSheet
 import com.example.ui.screens.AddEditWalletDialog
 import com.example.ui.screens.AppLockScreen
@@ -105,7 +111,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            DompetKuTheme {
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val useDarkTheme = themeMode == ThemeMode.DARK
+            DompetKuTheme(darkTheme = useDarkTheme) {
                 MainApp(viewModel = viewModel)
             }
         }
@@ -128,6 +136,7 @@ fun MainApp(
     val isAppLocked by viewModel.isAppLocked.collectAsStateWithLifecycle()
     val isLockEnabled by viewModel.isLockEnabled.collectAsStateWithLifecycle()
     val isAmountHidden by viewModel.isAmountHidden.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val showSecurityDialog by viewModel.showSecurityDialog.collectAsStateWithLifecycle()
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
@@ -168,6 +177,10 @@ fun MainApp(
     val editingAccountLiveBalance by viewModel.editingAccountLiveBalance.collectAsStateWithLifecycle()
     val showResetNetWorthDialog by viewModel.showResetNetWorthDialog.collectAsStateWithLifecycle()
     val allAccounts by viewModel.allAccounts.collectAsStateWithLifecycle()
+
+    val allSavingsGoals by viewModel.allSavingsGoals.collectAsStateWithLifecycle()
+    val showSavingsGoalDialog by viewModel.showSavingsGoalDialog.collectAsStateWithLifecycle()
+    val editingSavingsGoal by viewModel.editingSavingsGoal.collectAsStateWithLifecycle()
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -217,7 +230,7 @@ fun MainApp(
         topBar = {
             TopAppBar(
                 title = {
-                    DompetZuHeaderLogo()
+                    DompetZuHeaderLogo(isDarkTheme = (themeMode == ThemeMode.DARK))
                 },
                 actions = {
                     // Global Amount Visibility Toggle (Eye icon)
@@ -228,6 +241,21 @@ fun MainApp(
                         Icon(
                             imageVector = if (isAmountHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = if (isAmountHidden) "Tampilkan Nominal" else "Sembunyikan Nominal",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Theme Mode Quick Toggle Icon (Sun for Light, Moon for Dark)
+                    IconButton(
+                        onClick = { viewModel.toggleNextThemeMode() },
+                        modifier = Modifier.testTag("theme_mode_toggle_topbar")
+                    ) {
+                        val isDark = themeMode == ThemeMode.DARK
+                        val icon = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode
+                        val label = if (isDark) "Mode Gelap (🌙)" else "Mode Terang (☀️)"
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -369,6 +397,7 @@ fun MainApp(
                     report = report,
                     budgets = currentMonthBudgets,
                     bills = allBills,
+                    savingsGoals = allSavingsGoals,
                     onAddBudget = { viewModel.openAddBudget() },
                     onEditBudget = { viewModel.openEditBudget(it) },
                     onDeleteBudget = { viewModel.deleteBudget(it) },
@@ -376,6 +405,9 @@ fun MainApp(
                     onEditBill = { viewModel.openEditBill(it) },
                     onDeleteBill = { viewModel.deleteBill(it) },
                     onPayBill = { viewModel.payRecurringBill(it) },
+                    onAddSavingsGoal = { viewModel.openAddSavingsGoal() },
+                    onEditSavingsGoal = { viewModel.openEditSavingsGoal(it) },
+                    onDeleteSavingsGoal = { viewModel.deleteSavingsGoal(it) },
                     onPreviousMonth = { viewModel.previousMonth() },
                     onNextMonth = { viewModel.nextMonth() },
                     modifier = contentModifier
@@ -466,6 +498,8 @@ fun MainApp(
         if (showSecurityDialog) {
             SecuritySettingsDialog(
                 isLockEnabled = isLockEnabled,
+                themeMode = themeMode,
+                onThemeModeChange = { viewModel.setThemeMode(it) },
                 onDismiss = { viewModel.closeSecurityDialog() },
                 onSetPin = { newPin -> viewModel.setupNewPin(newPin) },
                 onVerifyPin = { pin -> viewModel.verifyPin(pin) },
@@ -501,6 +535,17 @@ fun MainApp(
                 onDismiss = { viewModel.closeResetNetWorthDialog() },
                 onResetBalance = { targetBalance, targetWallet, clearTx ->
                     viewModel.resetTotalNetWorth(targetBalance, targetWallet, clearTx)
+                }
+            )
+        }
+
+        // Add/Edit Target Tabungan Dialog
+        if (showSavingsGoalDialog) {
+            AddEditSavingsGoalDialog(
+                goal = editingSavingsGoal,
+                onDismiss = { viewModel.closeSavingsGoalDialog() },
+                onSave = { title, target, current, category, date, note ->
+                    viewModel.saveSavingsGoal(title, target, current, category, date, note)
                 }
             )
         }

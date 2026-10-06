@@ -414,10 +414,12 @@ fun DailyTrendChart(
 
 @Composable
 fun DompetZuHeaderLogo(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDarkTheme: Boolean = false
 ) {
+    val logoRes = if (isDarkTheme) R.drawable.ic_header_logo else R.drawable.ic_header_logo_dark
     Image(
-        painter = painterResource(id = R.drawable.ic_header_logo),
+        painter = painterResource(id = logoRes),
         contentDescription = "DompetZu Logo",
         modifier = modifier
             .height(28.dp)

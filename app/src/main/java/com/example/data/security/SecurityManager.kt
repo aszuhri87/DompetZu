@@ -4,6 +4,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.security.MessageDigest
 
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
+}
+
 class SecurityManager(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -13,6 +19,7 @@ class SecurityManager(context: Context) {
         private const val KEY_LOCK_ENABLED = "is_lock_enabled"
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_AMOUNT_HIDDEN = "is_amount_hidden"
+        private const val KEY_THEME_MODE = "theme_mode"
         private const val SALT = "DompetKu_Fintech_Salt_2026"
 
         @Volatile
@@ -41,6 +48,13 @@ class SecurityManager(context: Context) {
     var isAmountHidden: Boolean
         get() = prefs.getBoolean(KEY_AMOUNT_HIDDEN, false)
         set(value) = prefs.edit().putBoolean(KEY_AMOUNT_HIDDEN, value).apply()
+
+    var themeMode: ThemeMode
+        get() {
+            val name = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+            return try { ThemeMode.valueOf(name) } catch (e: Exception) { ThemeMode.SYSTEM }
+        }
+        set(value) = prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
 
     private var pinHash: String?
         get() = prefs.getString(KEY_PIN_HASH, null)

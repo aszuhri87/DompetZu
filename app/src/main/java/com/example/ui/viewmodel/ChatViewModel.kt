@@ -73,10 +73,10 @@ class ChatViewModel(
                 )
                 _messages.value = _messages.value + assistantMessage
                 _isLoading.value = false
-            }.onFailure { error ->
+            }.onFailure { _ ->
                 val errorMessage = ChatMessage(
                     role = MessageRole.MODEL,
-                    text = "Maaf, terjadi kendala saat memproses permintaan: ${error.localizedMessage ?: "Koneksi bermasalah"}. Silakan periksa koneksi internet atau kunci API Anda dan coba lagi.",
+                    text = "Ada kesalahan pada koneksi. silahkan coba beberapa saat lagi",
                     isError = true,
                     modelUsed = currentModel
                 )

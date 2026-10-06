@@ -40,12 +40,14 @@ private val LightColorScheme = lightColorScheme(
     secondaryContainer = SkyContainer,
     onSecondaryContainer = OnSkyContainer,
     tertiary = AmberWarning,
-    background = Slate50,
+    background = Color(0xFFEAEFF5),
     surface = Color.White,
-    surfaceVariant = Slate100,
+    surfaceVariant = Color(0xFFF8FAFC),
     onBackground = Slate900,
     onSurface = Slate900,
     onSurfaceVariant = Slate600,
+    outline = Color(0xFFCBD5E1),
+    outlineVariant = Color(0xFFE2E8F0),
     error = ExpenseRed
 )
 

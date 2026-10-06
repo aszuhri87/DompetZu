@@ -10,9 +10,11 @@ import com.example.data.model.CategoryBudgetEntity
 import com.example.data.model.DefaultCategories
 import com.example.data.model.MonthlyReportData
 import com.example.data.model.RecurringBillEntity
+import com.example.data.model.SavingsGoalEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
 import com.example.data.repository.FinanceRepository
+import com.example.data.security.ThemeMode
 import com.example.data.util.MonthlyReportCalculator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +54,19 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val _isAmountHidden = MutableStateFlow(securityManager.isAmountHidden)
     val isAmountHidden: StateFlow<Boolean> = _isAmountHidden.asStateFlow()
+
+    private val _themeMode = MutableStateFlow(securityManager.themeMode)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        securityManager.themeMode = mode
+    }
+
+    fun toggleNextThemeMode() {
+        val nextMode = if (_themeMode.value == ThemeMode.DARK) ThemeMode.LIGHT else ThemeMode.DARK
+        setThemeMode(nextMode)
+    }
 
     fun toggleAmountVisibility() {
         val newVal = !_isAmountHidden.value
@@ -166,12 +181,34 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _showResetNetWorthDialog = MutableStateFlow(false)
     val showResetNetWorthDialog: StateFlow<Boolean> = _showResetNetWorthDialog.asStateFlow()
 
+    // Savings Goals UI State
+    private val _showSavingsGoalDialog = MutableStateFlow(false)
+    val showSavingsGoalDialog: StateFlow<Boolean> = _showSavingsGoalDialog.asStateFlow()
+
+    private val _editingSavingsGoal = MutableStateFlow<SavingsGoalEntity?>(null)
+    val editingSavingsGoal: StateFlow<SavingsGoalEntity?> = _editingSavingsGoal.asStateFlow()
+
     fun openResetNetWorthDialog() {
         _showResetNetWorthDialog.value = true
     }
 
     fun closeResetNetWorthDialog() {
         _showResetNetWorthDialog.value = false
+    }
+
+    fun openAddSavingsGoal() {
+        _editingSavingsGoal.value = null
+        _showSavingsGoalDialog.value = true
+    }
+
+    fun openEditSavingsGoal(goal: SavingsGoalEntity) {
+        _editingSavingsGoal.value = goal
+        _showSavingsGoalDialog.value = true
+    }
+
+    fun closeSavingsGoalDialog() {
+        _showSavingsGoalDialog.value = false
+        _editingSavingsGoal.value = null
     }
 
     val allTransactions: StateFlow<List<TransactionEntity>>
@@ -181,6 +218,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     val allBills: StateFlow<List<RecurringBillEntity>>
     val allNotifications: StateFlow<List<AppNotificationEntity>>
     val unreadNotificationCount: StateFlow<Int>
+    val allSavingsGoals: StateFlow<List<SavingsGoalEntity>>
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -232,6 +270,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = 0
+        )
+
+        allSavingsGoals = repository.allSavingsGoals.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
         viewModelScope.launch {
@@ -930,5 +974,35 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     fun changeAppPin(oldPin: String, newPin: String): Boolean {
         return securityManager.changePin(oldPin, newPin)
+    }
+
+    fun saveSavingsGoal(
+        title: String,
+        targetAmount: Double,
+        currentAmount: Double,
+        category: String,
+        targetDateMillis: Long,
+        note: String
+    ) {
+        viewModelScope.launch {
+            val id = _editingSavingsGoal.value?.id ?: 0L
+            val goal = SavingsGoalEntity(
+                id = id,
+                title = title,
+                targetAmount = targetAmount,
+                currentAmount = currentAmount,
+                category = category,
+                targetDateMillis = targetDateMillis,
+                note = note
+            )
+            repository.upsertSavingsGoal(goal)
+            closeSavingsGoalDialog()
+        }
+    }
+
+    fun deleteSavingsGoal(id: Long) {
+        viewModelScope.launch {
+            repository.deleteSavingsGoalById(id)
+        }
     }
 }

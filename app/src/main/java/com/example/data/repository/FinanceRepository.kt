@@ -12,6 +12,7 @@ import com.example.data.model.CategoryBudgetEntity
 import com.example.data.model.CategoryEntity
 import com.example.data.model.DefaultCategories
 import com.example.data.model.RecurringBillEntity
+import com.example.data.model.SavingsGoalEntity
 import com.example.data.model.TransactionEntity
 import com.example.data.model.TransactionType
 import com.example.data.model.TransactionWithDetails
@@ -38,9 +39,18 @@ class FinanceRepository(
     val activeBills: Flow<List<RecurringBillEntity>> = recurringBillDao.getActiveBills()
     val allNotifications: Flow<List<AppNotificationEntity>> = notificationDao.getAllNotifications()
     val unreadNotificationCount: Flow<Int> = notificationDao.getUnreadCount()
+    val allSavingsGoals: Flow<List<SavingsGoalEntity>> = financeDao.getAllSavingsGoals()
 
     fun getTransactionsForRange(startMillis: Long, endMillis: Long): Flow<List<TransactionEntity>> {
         return financeDao.getTransactionsBetween(startMillis, endMillis)
+    }
+
+    suspend fun upsertSavingsGoal(goal: SavingsGoalEntity): Long {
+        return financeDao.upsertSavingsGoal(goal)
+    }
+
+    suspend fun deleteSavingsGoalById(id: Long) {
+        financeDao.deleteSavingsGoalById(id)
     }
 
     suspend fun insertTransaction(transaction: TransactionEntity, context: Context? = null): Long {

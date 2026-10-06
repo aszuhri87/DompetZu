@@ -29,6 +29,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -123,6 +125,11 @@ fun ReceiptScannerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        shape = RoundedCornerShape(24.dp),
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -286,13 +293,14 @@ fun ReceiptScannerDialog(
                                     },
                                     modifier = Modifier
                                         .weight(1f)
+                                        .height(48.dp)
                                         .testTag("camera_scan_button"),
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                 ) {
-                                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Buka Kamera", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Kamera", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
 
                                 // Photo Picker / Galeri Button
@@ -306,12 +314,14 @@ fun ReceiptScannerDialog(
                                     },
                                     modifier = Modifier
                                         .weight(1f)
+                                        .height(48.dp)
                                         .testTag("gallery_scan_button"),
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
                                 ) {
-                                    Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Pilih Galeri", fontSize = 11.sp)
+                                    Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Galeri", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -331,11 +341,12 @@ fun ReceiptScannerDialog(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
@@ -347,15 +358,17 @@ fun ReceiptScannerDialog(
                             ) {
                                 Text(
                                     text = "☕ Struk Kafe (78k)",
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(vertical = 10.dp),
                                     textAlign = TextAlign.Center
                                 )
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable {
@@ -367,8 +380,9 @@ fun ReceiptScannerDialog(
                             ) {
                                 Text(
                                     text = "🛒 Supermarket (345k)",
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(vertical = 10.dp),
                                     textAlign = TextAlign.Center
                                 )
                             }

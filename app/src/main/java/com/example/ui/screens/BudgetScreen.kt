@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,11 +51,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CategoryBudgetEntity
 import com.example.data.model.MonthlyReportData
 import com.example.data.model.RecurringBillEntity
+import com.example.data.model.SavingsGoalEntity
+import androidx.compose.material.icons.filled.Savings
 import com.example.data.util.MonthlyReportCalculator
 import com.example.ui.components.CategoryIconBadge
 import com.example.ui.components.CustomProgressBar
@@ -69,6 +73,7 @@ fun BudgetScreen(
     report: MonthlyReportData,
     budgets: List<CategoryBudgetEntity>,
     bills: List<RecurringBillEntity>,
+    savingsGoals: List<SavingsGoalEntity> = emptyList(),
     onAddBudget: () -> Unit,
     onEditBudget: (CategoryBudgetEntity) -> Unit,
     onDeleteBudget: (Long) -> Unit,
@@ -76,6 +81,9 @@ fun BudgetScreen(
     onEditBill: (RecurringBillEntity) -> Unit,
     onDeleteBill: (Long) -> Unit,
     onPayBill: (RecurringBillEntity) -> Unit,
+    onAddSavingsGoal: () -> Unit = {},
+    onEditSavingsGoal: (SavingsGoalEntity) -> Unit = {},
+    onDeleteSavingsGoal: (Long) -> Unit = {},
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     modifier: Modifier = Modifier
@@ -109,7 +117,7 @@ fun BudgetScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Segmented Tabs for Category Budgets vs Recurring Bills (Permanently Fixed)
+                    // Segmented Tabs for Category Budgets vs Recurring Bills vs Savings Goals (Permanently Fixed)
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -137,13 +145,13 @@ fun BudgetScreen(
                                         imageVector = Icons.Default.PieChart,
                                         contentDescription = null,
                                         tint = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Batas Anggaran (${budgets.size})",
+                                        text = "Anggaran",
                                         fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -167,14 +175,44 @@ fun BudgetScreen(
                                         imageVector = Icons.Default.Receipt,
                                         contentDescription = null,
                                         tint = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Tagihan Rutin (${bills.size})",
+                                        text = "Tagihan",
                                         fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (selectedTab == 2) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { selectedTab = 2 }
+                                    .testTag("tab_savings_goals")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Savings,
+                                        contentDescription = null,
+                                        tint = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Tabungan",
+                                        fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 11.sp,
+                                        color = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -200,7 +238,7 @@ fun BudgetScreen(
                         onDeleteBudget = onDeleteBudget,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else {
+                } else if (selectedTab == 1) {
                     RecurringBillsList(
                         bills = bills,
                         currentMonth = report.month,
@@ -211,6 +249,14 @@ fun BudgetScreen(
                         onPayBill = onPayBill,
                         modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    SavingsGoalsList(
+                        goals = savingsGoals,
+                        onAddGoal = onAddSavingsGoal,
+                        onEditGoal = onEditSavingsGoal,
+                        onDeleteGoal = onDeleteSavingsGoal,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
@@ -218,7 +264,7 @@ fun BudgetScreen(
         // Floating Action Button pinned to BottomEnd
         FloatingActionButton(
             onClick = {
-                if (selectedTab == 0) onAddBudget() else onAddBill()
+                if (selectedTab == 0) onAddBudget() else if (selectedTab == 1) onAddBill() else onAddSavingsGoal()
             },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = Color.White,
@@ -230,7 +276,7 @@ fun BudgetScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = if (selectedTab == 0) "Tambah Anggaran" else "Tambah Tagihan"
+                contentDescription = if (selectedTab == 0) "Tambah Anggaran" else if (selectedTab == 1) "Tambah Tagihan" else "Tambah Target Tabungan"
             )
         }
     }
@@ -933,6 +979,343 @@ fun RecurringBillItemCard(
                             color = IncomeGreen
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SavingsGoalsList(
+    goals: List<SavingsGoalEntity>,
+    onAddGoal: () -> Unit,
+    onEditGoal: (SavingsGoalEntity) -> Unit,
+    onDeleteGoal: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (goals.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize().padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Savings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.size(64.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Belum Ada Target Tabungan",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Buat target tabungan (misal: Pernikahan, Liburan) untuk mulai menabung!",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onAddGoal,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Buat Target Baru", fontSize = 12.sp)
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(6.dp))
+                // Summary/Header card for total savings goal progress
+                val totalTarget = goals.sumOf { it.targetAmount }
+                val totalSaved = goals.sumOf { it.currentAmount }
+                val overallPercent = if (totalTarget > 0) ((totalSaved / totalTarget) * 100).toInt() else 0
+                
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Kemajuan Tabungan Impian",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Total Terkumpul",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = MonthlyReportCalculator.formatRupiah(totalSaved),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "Total Target",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = MonthlyReportCalculator.formatRupiah(totalTarget),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(10.dp))
+                        CustomProgressBar(
+                            progress = (overallPercent / 100f).coerceIn(0f, 1f),
+                            barColor = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Tercapai $overallPercent%",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Sisa: " + MonthlyReportCalculator.formatRupiah(kotlin.math.max(0.0, totalTarget - totalSaved)),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+            
+            items(goals) { goal ->
+                SavingsGoalCard(
+                    goal = goal,
+                    onEdit = { onEditGoal(goal) },
+                    onDelete = { onDeleteGoal(goal.id) }
+                )
+            }
+            
+            item {
+                Spacer(modifier = Modifier.height(80.dp)) // padding for FAB
+            }
+        }
+    }
+}
+
+@Composable
+fun SavingsGoalCard(
+    goal: SavingsGoalEntity,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val progressPercent = if (goal.targetAmount > 0) ((goal.currentAmount / goal.targetAmount) * 100).toInt() else 0
+    val formattedTarget = MonthlyReportCalculator.formatRupiah(goal.targetAmount)
+    val formattedCurrent = MonthlyReportCalculator.formatRupiah(goal.currentAmount)
+    val remaining = kotlin.math.max(0.0, goal.targetAmount - goal.currentAmount)
+    val formattedRemaining = MonthlyReportCalculator.formatRupiah(remaining)
+    
+    // Get customized tips based on the targetAmount
+    val tipsText = when {
+        goal.targetAmount < 5000000 -> {
+            "🎯 Target jangka pendek! Sisihkan Rp 15.000 - Rp 25.000 dari uang jajan harian Anda. Kurangi belanja impulsif agar target ini bisa tercapai dalam hitungan minggu."
+        }
+        goal.targetAmount in 5000000.0..20000000.0 -> {
+            "📈 Alokasikan sekitar 15-20% dari gaji bulanan langsung ke pos ini sesaat setelah gajian. Gunakan rekening pasif tanpa kartu ATM agar tidak mudah ditarik."
+        }
+        goal.targetAmount in 20000000.0..100000000.0 -> {
+            "💍 Target menengah yang membutuhkan komitmen! Manfaatkan fitur autodebet bulanan, dan pertimbangkan menaruh tabungan ini di instrumen likuid & aman seperti Reksa Dana Pasar Uang (RDPU) agar bertumbuh."
+        }
+        else -> {
+            "🏡 Target besar & berharga! Pecah target ini ke rentang tahunan atau bulanan yang realistis. Selain berhemat, coba tingkatkan pemasukan tambahan (side-job) untuk mempercepat pencapaian target ini."
+        }
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Display emoji or icon based on category
+                        val emoji = when (goal.category) {
+                            "Pernikahan" -> "💍"
+                            "Liburan" -> "✈️"
+                            "Pendidikan" -> "🎓"
+                            "Kendaraan" -> "🚗"
+                            "Rumah" -> "🏡"
+                            "Gaya Hidup" -> "🛍️"
+                            else -> "💰"
+                        }
+                        Text(emoji, fontSize = 18.sp)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = goal.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Kategori: ${goal.category}",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Row {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Hapus",
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Progress bar
+            CustomProgressBar(
+                progress = (progressPercent / 100f).coerceIn(0f, 1f),
+                barColor = if (progressPercent >= 100) IncomeGreen else MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Values
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$progressPercent% Terkumpul",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (progressPercent >= 100) IncomeGreen else MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "$formattedCurrent dari $formattedTarget",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (progressPercent < 100) {
+                Text(
+                    text = "Sisa tabungan: $formattedRemaining",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = IncomeGreen.copy(alpha = 0.15f),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "🎉 Selamat! Target Tabungan Tercapai!",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = IncomeGreen,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Actionable AI Tips Section (Insight)
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Tips Sukses Tabungan:",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = tipsText,
+                        fontSize = 10.5.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
                 }
             }
         }
