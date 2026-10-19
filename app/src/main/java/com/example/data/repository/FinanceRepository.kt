@@ -484,4 +484,206 @@ class FinanceRepository(
             defaultBills.forEach { recurringBillDao.insertBill(it) }
         }
     }
+
+    suspend fun getBackupJson(): String {
+        // Query everything from database
+        val transactions = financeDao.getAllTransactions().first()
+        val budgets = financeDao.getAllBudgets().first()
+        val accounts = accountDao.getAllAccounts().first()
+        val bills = recurringBillDao.getAllBills().first()
+        val savings = financeDao.getAllSavingsGoals().first()
+
+        val backupObj = org.json.JSONObject()
+        backupObj.put("version", 1)
+        backupObj.put("backupDate", System.currentTimeMillis())
+
+        // Transactions
+        val txArray = org.json.JSONArray()
+        for (tx in transactions) {
+            val obj = org.json.JSONObject()
+            obj.put("title", tx.title)
+            obj.put("amount", tx.amount)
+            obj.put("type", tx.type)
+            obj.put("category", tx.category)
+            obj.put("walletName", tx.walletName)
+            obj.put("dateMillis", tx.dateMillis)
+            obj.put("note", tx.note)
+            txArray.put(obj)
+        }
+        backupObj.put("transactions", txArray)
+
+        // Budgets
+        val budgetArray = org.json.JSONArray()
+        for (b in budgets) {
+            val obj = org.json.JSONObject()
+            obj.put("category", b.category)
+            obj.put("month", b.month)
+            obj.put("year", b.year)
+            obj.put("budgetAmount", b.budgetAmount)
+            obj.put("thresholdPercent", b.thresholdPercent)
+            obj.put("alertEnabled", b.alertEnabled)
+            budgetArray.put(obj)
+        }
+        backupObj.put("budgets", budgetArray)
+
+        // Accounts
+        val accountArray = org.json.JSONArray()
+        for (a in accounts) {
+            val obj = org.json.JSONObject()
+            obj.put("name", a.name)
+            obj.put("type", a.type)
+            obj.put("initialBalance", a.initialBalance)
+            obj.put("colorHex", a.colorHex)
+            obj.put("iconKey", a.iconKey)
+            accountArray.put(obj)
+        }
+        backupObj.put("accounts", accountArray)
+
+        // Bills
+        val billArray = org.json.JSONArray()
+        for (bill in bills) {
+            val obj = org.json.JSONObject()
+            obj.put("title", bill.title)
+            obj.put("amount", bill.amount)
+            obj.put("category", bill.category)
+            obj.put("walletName", bill.walletName)
+            obj.put("dueDay", bill.dueDay)
+            obj.put("frequency", bill.frequency)
+            obj.put("reminderDaysBefore", bill.reminderDaysBefore)
+            obj.put("isActive", bill.isActive)
+            obj.put("lastPaidDateMillis", bill.lastPaidDateMillis ?: -1L)
+            obj.put("note", bill.note)
+            billArray.put(obj)
+        }
+        backupObj.put("bills", billArray)
+
+        // Savings Goals
+        val savingsArray = org.json.JSONArray()
+        for (s in savings) {
+            val obj = org.json.JSONObject()
+            obj.put("title", s.title)
+            obj.put("targetAmount", s.targetAmount)
+            obj.put("currentAmount", s.currentAmount)
+            obj.put("category", s.category)
+            obj.put("targetDateMillis", s.targetDateMillis)
+            obj.put("note", s.note)
+            savingsArray.put(obj)
+        }
+        backupObj.put("savingsGoals", savingsArray)
+
+        return backupObj.toString(4) // pretty print
+    }
+
+    suspend fun restoreBackupJson(jsonString: String): Boolean {
+        return try {
+            val backupObj = org.json.JSONObject(jsonString)
+
+            // Clear current tables
+            financeDao.deleteAllTransactions()
+            financeDao.getAllBudgets().first().forEach { financeDao.deleteBudgetById(it.id) }
+            accountDao.getAllAccounts().first().forEach { accountDao.deleteAccountById(it.id) }
+            recurringBillDao.getAllBills().first().forEach { recurringBillDao.deleteBillById(it.id) }
+            financeDao.getAllSavingsGoals().first().forEach { financeDao.deleteSavingsGoalById(it.id) }
+
+            // 1. Restore Accounts
+            val accountArray = backupObj.optJSONArray("accounts")
+            if (accountArray != null) {
+                for (i in 0 until accountArray.length()) {
+                    val obj = accountArray.getJSONObject(i)
+                    accountDao.insertAccount(
+                        AccountEntity(
+                            name = obj.getString("name"),
+                            type = obj.getString("type"),
+                            initialBalance = obj.getDouble("initialBalance"),
+                            colorHex = obj.getLong("colorHex"),
+                            iconKey = obj.getString("iconKey")
+                        )
+                    )
+                }
+            }
+
+            // 2. Restore Transactions
+            val txArray = backupObj.optJSONArray("transactions")
+            if (txArray != null) {
+                for (i in 0 until txArray.length()) {
+                    val obj = txArray.getJSONObject(i)
+                    financeDao.insertTransaction(
+                        TransactionEntity(
+                            title = obj.getString("title"),
+                            amount = obj.getDouble("amount"),
+                            type = obj.getString("type"),
+                            category = obj.getString("category"),
+                            walletName = obj.getString("walletName"),
+                            dateMillis = obj.getLong("dateMillis"),
+                            note = obj.optString("note", "")
+                        )
+                    )
+                }
+            }
+
+            // 3. Restore Budgets
+            val budgetArray = backupObj.optJSONArray("budgets")
+            if (budgetArray != null) {
+                for (i in 0 until budgetArray.length()) {
+                    val obj = budgetArray.getJSONObject(i)
+                    financeDao.upsertBudget(
+                        CategoryBudgetEntity(
+                            category = obj.getString("category"),
+                            month = obj.getInt("month"),
+                            year = obj.getInt("year"),
+                            budgetAmount = obj.getDouble("budgetAmount"),
+                            thresholdPercent = obj.optInt("thresholdPercent", 80),
+                            alertEnabled = obj.optBoolean("alertEnabled", true)
+                        )
+                    )
+                }
+            }
+
+            // 4. Restore Bills
+            val billArray = backupObj.optJSONArray("bills")
+            if (billArray != null) {
+                for (i in 0 until billArray.length()) {
+                    val obj = billArray.getJSONObject(i)
+                    val lastPaid = obj.optLong("lastPaidDateMillis", -1L)
+                    recurringBillDao.insertBill(
+                        RecurringBillEntity(
+                            title = obj.getString("title"),
+                            amount = obj.getDouble("amount"),
+                            category = obj.getString("category"),
+                            walletName = obj.getString("walletName"),
+                            dueDay = obj.getInt("dueDay"),
+                            frequency = obj.optString("frequency", "MONTHLY"),
+                            reminderDaysBefore = obj.optInt("reminderDaysBefore", 3),
+                            isActive = obj.optBoolean("isActive", true),
+                            lastPaidDateMillis = if (lastPaid == -1L) null else lastPaid,
+                            note = obj.optString("note", "")
+                        )
+                    )
+                }
+            }
+
+            // 5. Restore Savings Goals
+            val savingsArray = backupObj.optJSONArray("savingsGoals")
+            if (savingsArray != null) {
+                for (i in 0 until savingsArray.length()) {
+                    val obj = savingsArray.getJSONObject(i)
+                    financeDao.upsertSavingsGoal(
+                        SavingsGoalEntity(
+                            title = obj.getString("title"),
+                            targetAmount = obj.getDouble("targetAmount"),
+                            currentAmount = obj.getDouble("currentAmount"),
+                            category = obj.getString("category"),
+                            targetDateMillis = obj.getLong("targetDateMillis"),
+                            note = obj.optString("note", "")
+                        )
+                    )
+                }
+            }
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 }

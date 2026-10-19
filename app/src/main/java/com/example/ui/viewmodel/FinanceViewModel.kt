@@ -45,6 +45,25 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val securityManager = com.example.data.security.SecurityManager.getInstance(application)
     private val geminiRepository = com.example.data.gemini.GeminiRepository()
+    private val goldPriceManager = com.example.data.util.GoldPriceManager.getInstance(application)
+
+    val liveGoldPrice: StateFlow<Double> = goldPriceManager.currentPrice
+    val liveGoldPreviousPrice: StateFlow<Double> = goldPriceManager.previousPrice
+    val liveGoldPriceChange: StateFlow<Double> = goldPriceManager.priceChange
+    val liveGoldPriceChangePercent: StateFlow<Double> = goldPriceManager.priceChangePercent
+    val liveGoldLastUpdated: StateFlow<String> = goldPriceManager.lastUpdated
+    val liveGoldSourceName: StateFlow<String> = goldPriceManager.sourceName
+    val isRefreshingGoldPrice: StateFlow<Boolean> = goldPriceManager.isRefreshing
+
+    fun refreshLiveGoldPrice() {
+        viewModelScope.launch {
+            goldPriceManager.refreshGoldPrice()
+        }
+    }
+
+    fun setCustomGoldPrice(price: Double) {
+        goldPriceManager.setCustomPrice(price)
+    }
 
     private val _isLockEnabled = MutableStateFlow(securityManager.isLockEnabled)
     val isLockEnabled: StateFlow<Boolean> = _isLockEnabled.asStateFlow()
@@ -181,6 +200,22 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private val _showResetNetWorthDialog = MutableStateFlow(false)
     val showResetNetWorthDialog: StateFlow<Boolean> = _showResetNetWorthDialog.asStateFlow()
 
+    // Transfer Fund Dialog State
+    private val _showTransferDialog = MutableStateFlow(false)
+    val showTransferDialog: StateFlow<Boolean> = _showTransferDialog.asStateFlow()
+    private val _transferSourceWallet = MutableStateFlow<String?>(null)
+    val transferSourceWallet: StateFlow<String?> = _transferSourceWallet.asStateFlow()
+
+    fun openTransferDialog(preselectedSource: String? = null) {
+        _transferSourceWallet.value = preselectedSource
+        _showTransferDialog.value = true
+    }
+
+    fun closeTransferDialog() {
+        _showTransferDialog.value = false
+        _transferSourceWallet.value = null
+    }
+
     // Savings Goals UI State
     private val _showSavingsGoalDialog = MutableStateFlow(false)
     val showSavingsGoalDialog: StateFlow<Boolean> = _showSavingsGoalDialog.asStateFlow()
@@ -281,6 +316,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             repository.seedDefaultsIfEmpty()
             repository.checkAllAlertsAndBills(application)
+            goldPriceManager.refreshGoldPrice()
         }
     }
 
@@ -300,8 +336,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     tx.walletName.contains(query, ignoreCase = true)
 
             val matchType = when (typeFilter) {
-                "EXPENSE" -> tx.type == TransactionType.EXPENSE.name
-                "INCOME" -> tx.type == TransactionType.INCOME.name
+                "EXPENSE" -> tx.type == TransactionType.EXPENSE.name && !tx.category.contains("Transfer", ignoreCase = true)
+                "INCOME" -> tx.type == TransactionType.INCOME.name && !tx.category.contains("Transfer", ignoreCase = true)
+                "TRANSFER" -> tx.type == TransactionType.TRANSFER.name || tx.type == "TRANSFER" || tx.category.contains("Transfer", ignoreCase = true)
                 else -> true
             }
 
@@ -363,8 +400,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
         val calculatedNetWorth = accounts.sumOf { account ->
             val accountTx = txList.filter { it.walletName.equals(account.name, ignoreCase = true) }
-            val inc = accountTx.filter { it.type == TransactionType.INCOME.name }.sumOf { it.amount }
-            val exp = accountTx.filter { it.type == TransactionType.EXPENSE.name }.sumOf { it.amount }
+            val inc = accountTx.filter { 
+                it.type == TransactionType.INCOME.name || 
+                (it.type == TransactionType.TRANSFER.name && (it.category.contains("Masuk", ignoreCase = true) || it.title.contains("dari", ignoreCase = true)))
+            }.sumOf { it.amount }
+            val exp = accountTx.filter { 
+                it.type == TransactionType.EXPENSE.name || 
+                (it.type == TransactionType.TRANSFER.name && (it.category.contains("Keluar", ignoreCase = true) || it.title.contains("ke ", ignoreCase = true)))
+            }.sumOf { it.amount }
             (account.initialBalance ?: 0.0) + inc - exp
         }
 
@@ -396,8 +439,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     ) { txList, accounts ->
         accounts.map { account ->
             val accountTx = txList.filter { it.walletName.equals(account.name, ignoreCase = true) }
-            val income = accountTx.filter { it.type == TransactionType.INCOME.name }.sumOf { it.amount }
-            val expense = accountTx.filter { it.type == TransactionType.EXPENSE.name }.sumOf { it.amount }
+            val income = accountTx.filter { 
+                it.type == TransactionType.INCOME.name || 
+                (it.type == TransactionType.TRANSFER.name && (it.category.contains("Masuk", ignoreCase = true) || it.title.contains("dari", ignoreCase = true)))
+            }.sumOf { it.amount }
+            val expense = accountTx.filter { 
+                it.type == TransactionType.EXPENSE.name || 
+                (it.type == TransactionType.TRANSFER.name && (it.category.contains("Keluar", ignoreCase = true) || it.title.contains("ke ", ignoreCase = true)))
+            }.sumOf { it.amount }
             val calculatedBalance = (account.initialBalance ?: 0.0) + income - expense
 
             WalletBalance(
@@ -523,10 +572,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         targetBalance: Double,
         colorHex: Long,
         iconKey: String,
-        clearWalletTransactions: Boolean = false
+        clearWalletTransactions: Boolean = false,
+        sourceWalletToDeduct: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val current = _editingAccount.value
+            val now = System.currentTimeMillis()
             if (current != null && current.id != 0L) {
                 val oldName = current.name
                 if (clearWalletTransactions) {
@@ -539,6 +590,43 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                             colorHex = colorHex,
                             iconKey = iconKey
                         )
+                    )
+                } else if (!sourceWalletToDeduct.isNullOrBlank() && targetBalance > 0) {
+                    // Update account metadata
+                    repository.updateAccount(
+                        current.copy(
+                            name = name,
+                            type = type,
+                            colorHex = colorHex,
+                            iconKey = iconKey
+                        )
+                    )
+                    // Transfer the amount from sourceWalletToDeduct to this wallet
+                    repository.insertTransaction(
+                        TransactionEntity(
+                            id = 0L,
+                            title = "Transfer ke $name",
+                            amount = targetBalance,
+                            type = TransactionType.EXPENSE.name,
+                            category = "Transfer Saldo",
+                            walletName = sourceWalletToDeduct,
+                            dateMillis = now,
+                            note = "Transfer saldo ke $name"
+                        ),
+                        context = getApplication()
+                    )
+                    repository.insertTransaction(
+                        TransactionEntity(
+                            id = 0L,
+                            title = "Transfer dari $sourceWalletToDeduct",
+                            amount = targetBalance,
+                            type = TransactionType.INCOME.name,
+                            category = "Transfer Saldo",
+                            walletName = name,
+                            dateMillis = now,
+                            note = "Transfer saldo dari $sourceWalletToDeduct"
+                        ),
+                        context = getApplication()
                     )
                 } else {
                     val txList = allTransactions.value.filter { it.walletName.equals(oldName, ignoreCase = true) }
@@ -558,17 +646,107 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
             } else {
-                repository.insertAccount(
-                    AccountEntity(
-                        name = name,
-                        type = type,
-                        initialBalance = targetBalance,
-                        colorHex = colorHex,
-                        iconKey = iconKey
+                if (!sourceWalletToDeduct.isNullOrBlank() && targetBalance > 0) {
+                    repository.insertAccount(
+                        AccountEntity(
+                            name = name,
+                            type = type,
+                            initialBalance = 0.0,
+                            colorHex = colorHex,
+                            iconKey = iconKey
+                        )
                     )
-                )
+                    repository.insertTransaction(
+                        TransactionEntity(
+                            id = 0L,
+                            title = "Transfer ke $name",
+                            amount = targetBalance,
+                            type = TransactionType.EXPENSE.name,
+                            category = "Transfer Saldo",
+                            walletName = sourceWalletToDeduct,
+                            dateMillis = now,
+                            note = "Saldo awal dompet $name"
+                        ),
+                        context = getApplication()
+                    )
+                    repository.insertTransaction(
+                        TransactionEntity(
+                            id = 0L,
+                            title = "Transfer dari $sourceWalletToDeduct",
+                            amount = targetBalance,
+                            type = TransactionType.INCOME.name,
+                            category = "Transfer Saldo",
+                            walletName = name,
+                            dateMillis = now,
+                            note = "Saldo awal dari $sourceWalletToDeduct"
+                        ),
+                        context = getApplication()
+                    )
+                } else {
+                    repository.insertAccount(
+                        AccountEntity(
+                            name = name,
+                            type = type,
+                            initialBalance = targetBalance,
+                            colorHex = colorHex,
+                            iconKey = iconKey
+                        )
+                    )
+                }
             }
             closeWalletDialog()
+        }
+    }
+
+    fun transferFunds(
+        sourceWallet: String,
+        targetWallet: String,
+        amount: Double,
+        note: String
+    ) {
+        if (amount <= 0.0 || sourceWallet.equals(targetWallet, ignoreCase = true)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val customNote = note.trim().ifBlank { "Pemindahan dana dari $sourceWallet ke $targetWallet" }
+
+            // Transfer OUT from source wallet
+            val sourceTx = TransactionEntity(
+                id = 0L,
+                title = "Transfer ke $targetWallet",
+                amount = amount,
+                type = TransactionType.TRANSFER.name,
+                category = "Transfer Keluar",
+                walletName = sourceWallet,
+                dateMillis = now,
+                note = customNote
+            )
+            repository.insertTransaction(sourceTx, context = getApplication())
+
+            // Transfer IN to target wallet
+            val targetTx = TransactionEntity(
+                id = 0L,
+                title = "Transfer dari $sourceWallet",
+                amount = amount,
+                type = TransactionType.TRANSFER.name,
+                category = "Transfer Masuk",
+                walletName = targetWallet,
+                dateMillis = now,
+                note = customNote
+            )
+            repository.insertTransaction(targetTx, context = getApplication())
+
+            val formattedAmount = MonthlyReportCalculator.formatRupiah(amount)
+            repository.insertNotification(
+                AppNotificationEntity(
+                    title = "Pemindahan Dana Berhasil",
+                    message = "Berhasil memindahkan $formattedAmount dari '$sourceWallet' ke '$targetWallet'.",
+                    type = "SYSTEM",
+                    category = "Transfer Saldo",
+                    timestampMillis = now
+                )
+            )
+
+            closeTransferDialog()
         }
     }
 
@@ -1003,6 +1181,20 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteSavingsGoal(id: Long) {
         viewModelScope.launch {
             repository.deleteSavingsGoalById(id)
+        }
+    }
+
+    fun exportBackupData(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val json = repository.getBackupJson()
+            onResult(json)
+        }
+    }
+
+    fun importBackupData(jsonString: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.restoreBackupJson(jsonString)
+            onResult(success)
         }
     }
 }

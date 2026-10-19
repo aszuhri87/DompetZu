@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
@@ -90,6 +91,7 @@ fun HomeScreen(
     onTransactionClick: (TransactionEntity) -> Unit,
     onAddWallet: () -> Unit = {},
     onEditWallet: (String) -> Unit = {},
+    onTransferFund: (String?) -> Unit = {},
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     modifier: Modifier = Modifier
@@ -240,7 +242,8 @@ fun HomeScreen(
                 isAmountHidden = isAmountHidden,
                 onAddWallet = onAddWallet,
                 onEditWallet = onEditWallet,
-                onResetNetWorth = onResetNetWorth
+                onResetNetWorth = onResetNetWorth,
+                onTransferFund = onTransferFund
             )
         }
 
@@ -713,63 +716,155 @@ fun WalletsSection(
     onAddWallet: () -> Unit = {},
     onEditWallet: (String) -> Unit = {},
     onResetNetWorth: () -> Unit = {},
+    onTransferFund: (String?) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
+        // Header Row: Title & Action
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Kantong Dompet",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Column {
+                Text(
+                    text = "Kantong Dompet",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "${walletBalances.size} Dompet Terdaftar",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 1.dp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable(onClick = onAddWallet)
+                    .testTag("btn_manage_wallets")
             ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = ExpenseRed.copy(alpha = 0.12f),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onResetNetWorth)
-                        .testTag("btn_empty_wallets_quick")
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Kosongkan",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ExpenseRed,
-                        maxLines = 1,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
                     )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onAddWallet)
-                        .testTag("btn_manage_wallets")
-                ) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "+ Atur Saldo",
-                        fontSize = 11.sp,
+                        text = "Atur Saldo",
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                        color = Color.White
                     )
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Modern Action Pills Row for Wallets (Pindah Dana & Kosongkan Saldo)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Pindah Dana Button
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = { onTransferFund(null) })
+                    .testTag("btn_transfer_funds_quick")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Pindah Dana",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
+            // Kosongkan Saldo Button
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = ExpenseRed.copy(alpha = 0.08f),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    ExpenseRed.copy(alpha = 0.2f)
+                ),
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onResetNetWorth)
+                    .testTag("btn_empty_wallets_quick")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(ExpenseRed.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RestartAlt,
+                            contentDescription = null,
+                            tint = ExpenseRed,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Kosongkan",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ExpenseRed
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         if (walletBalances.size <= 2) {
             Row(
@@ -852,8 +947,20 @@ fun TransactionItemRow(
     modifier: Modifier = Modifier
 ) {
     val isExpense = transaction.type == TransactionType.EXPENSE.name
+    val isTransfer = transaction.type == TransactionType.TRANSFER.name || transaction.category.contains("Transfer", ignoreCase = true)
     val catMeta = DefaultCategories.findCategory(transaction.category)
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+
+    val amountPrefix = when {
+        isExpense -> "- "
+        isTransfer -> if (transaction.category.contains("Keluar", ignoreCase = true) || transaction.title.contains("ke ", ignoreCase = true)) "- " else "⇄ "
+        else -> "+ "
+    }
+    val amountColor = when {
+        isExpense -> ExpenseRed
+        isTransfer -> Color(0xFF2563EB)
+        else -> IncomeGreen
+    }
 
     Card(
         modifier = modifier
@@ -907,10 +1014,10 @@ fun TransactionItemRow(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = (if (isExpense) "- " else "+ ") + MonthlyReportCalculator.formatNominal(transaction.amount, isAmountHidden),
+                    text = amountPrefix + MonthlyReportCalculator.formatNominal(transaction.amount, isAmountHidden),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isExpense) ExpenseRed else IncomeGreen
+                    color = amountColor
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(

@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -294,7 +295,8 @@ fun ResetNetWorthDialog(
                         items(presetAmounts) { (label, amount) ->
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable {
@@ -309,9 +311,9 @@ fun ResetNetWorthDialog(
                                 Text(
                                     text = label,
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
                                 )
                             }
                         }
@@ -334,7 +336,9 @@ fun ResetNetWorthDialog(
                                 val isSelected = selectedWalletName == acc.name
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    border = if (!isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)) else null,
+                                    shadowElevation = if (isSelected) 1.dp else 0.dp,
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
                                         .clickable { selectedWalletName = acc.name }
@@ -343,8 +347,8 @@ fun ResetNetWorthDialog(
                                         text = acc.name,
                                         fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
                                     )
                                 }
                             }
@@ -390,12 +394,24 @@ fun ResetNetWorthDialog(
                     }
                     onDismiss()
                 },
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (selectedTab == 0) ExpenseRed else MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier.testTag("confirm_reset_net_worth_button")
             ) {
-                Text(if (selectedTab == 0) "Kosongkan ke Rp 0" else "Terapkan Saldo Baru")
+                Text(
+                    text = if (selectedTab == 0) "Kosongkan ke Rp 0" else "Terapkan Saldo Baru",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Batal")
             }
         }
     )

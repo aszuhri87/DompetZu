@@ -8,7 +8,8 @@ import androidx.room.Relation
 
 enum class TransactionType(val label: String) {
     EXPENSE("Pengeluaran"),
-    INCOME("Pemasukan")
+    INCOME("Pemasukan"),
+    TRANSFER("Transfer")
 }
 
 @Entity(
@@ -78,7 +79,14 @@ object DefaultCategories {
         FinanceCategory("other_inc", "Pemasukan Lain", TransactionType.INCOME, 0xFF64748B, "account_balance_wallet")
     )
 
-    val allCategories = expenseCategories + incomeCategories
+    val transferCategories = listOf(
+        FinanceCategory("transfer_out", "Transfer Keluar", TransactionType.TRANSFER, 0xFF3B82F6, "compare_arrows"),
+        FinanceCategory("transfer_in", "Transfer Masuk", TransactionType.TRANSFER, 0xFF0284C7, "swap_horiz"),
+        FinanceCategory("transfer_saldo", "Transfer Saldo", TransactionType.TRANSFER, 0xFF2563EB, "sync_alt"),
+        FinanceCategory("transfer_generic", "Transfer", TransactionType.TRANSFER, 0xFF2563EB, "compare_arrows")
+    )
+
+    val allCategories = expenseCategories + incomeCategories + transferCategories
 
     val defaultWallets = listOf("Tunai", "Rekening Bank", "E-Wallet")
 

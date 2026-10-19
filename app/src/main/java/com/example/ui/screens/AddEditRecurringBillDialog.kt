@@ -50,6 +50,7 @@ import com.example.ui.components.CategoryIconBadge
 @Composable
 fun AddEditRecurringBillDialog(
     bill: RecurringBillEntity?,
+    availableWallets: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (
         title: String,
@@ -63,16 +64,28 @@ fun AddEditRecurringBillDialog(
     ) -> Unit
 ) {
     val expenseCategories = DefaultCategories.expenseCategories
-    val wallets = DefaultCategories.defaultWallets
+    val wallets = remember(availableWallets) {
+        if (availableWallets.isNotEmpty()) {
+            availableWallets.distinct()
+        } else {
+            DefaultCategories.defaultWallets
+        }
+    }
 
-    var title by remember { mutableStateOf(bill?.title ?: "") }
-    var amountText by remember { mutableStateOf(bill?.amount?.toLong()?.toString() ?: "") }
-    var selectedCategory by remember { mutableStateOf(bill?.category ?: "Tagihan & Utilitas") }
-    var selectedWallet by remember { mutableStateOf(bill?.walletName ?: "Rekening Bank") }
-    var dueDayText by remember { mutableStateOf(bill?.dueDay?.toString() ?: "10") }
-    var frequency by remember { mutableStateOf(bill?.frequency ?: "BULANAN") }
-    var reminderDaysBefore by remember { mutableIntStateOf(bill?.reminderDaysBefore ?: 3) }
-    var note by remember { mutableStateOf(bill?.note ?: "") }
+    var title by remember(bill) { mutableStateOf(bill?.title ?: "") }
+    var amountText by remember(bill) { mutableStateOf(bill?.amount?.toLong()?.toString() ?: "") }
+    var selectedCategory by remember(bill) { mutableStateOf(bill?.category ?: "Tagihan & Utilitas") }
+    var selectedWallet by remember(bill, wallets) {
+        mutableStateOf(
+            bill?.walletName?.takeIf { w -> wallets.contains(w) }
+                ?: wallets.firstOrNull()
+                ?: "Rekening Bank"
+        )
+    }
+    var dueDayText by remember(bill) { mutableStateOf(bill?.dueDay?.toString() ?: "10") }
+    var frequency by remember(bill) { mutableStateOf(bill?.frequency ?: "BULANAN") }
+    var reminderDaysBefore by remember(bill) { mutableIntStateOf(bill?.reminderDaysBefore ?: 3) }
+    var note by remember(bill) { mutableStateOf(bill?.note ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -321,13 +334,22 @@ fun AddEditRecurringBillDialog(
                     }
                 },
                 enabled = title.isNotBlank() && (amountText.toDoubleOrNull() ?: 0.0) > 0,
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ),
                 modifier = Modifier.testTag("save_bill_button")
             ) {
-                Text("Simpan")
+                Text("Simpan", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Batal")
             }
         }
     )

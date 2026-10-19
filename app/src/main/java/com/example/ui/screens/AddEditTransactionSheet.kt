@@ -86,9 +86,11 @@ fun AddEditTransactionSheet(
 
     var type by remember(existingTransaction) {
         mutableStateOf(
-            if (existingTransaction?.type == TransactionType.INCOME.name)
-                TransactionType.INCOME
-            else TransactionType.EXPENSE
+            when (existingTransaction?.type) {
+                TransactionType.INCOME.name -> TransactionType.INCOME
+                TransactionType.TRANSFER.name -> TransactionType.TRANSFER
+                else -> TransactionType.EXPENSE
+            }
         )
     }
 
@@ -101,10 +103,10 @@ fun AddEditTransactionSheet(
         )
     }
 
-    val availableCategories = if (type == TransactionType.EXPENSE) {
-        DefaultCategories.expenseCategories
-    } else {
-        DefaultCategories.incomeCategories
+    val availableCategories = when (type) {
+        TransactionType.EXPENSE -> DefaultCategories.expenseCategories
+        TransactionType.INCOME -> DefaultCategories.incomeCategories
+        TransactionType.TRANSFER -> DefaultCategories.transferCategories
     }
 
     var selectedCategory by remember(type, existingTransaction) {
@@ -190,7 +192,7 @@ fun AddEditTransactionSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Type Toggle (Pengeluaran vs Pemasukan)
+            // Type Toggle (Pengeluaran vs Pemasukan vs Transfer)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -220,6 +222,17 @@ fun AddEditTransactionSheet(
                     },
                     modifier = Modifier.weight(1f),
                     tag = "type_income_btn"
+                )
+                TypeToggleButton(
+                    label = "Transfer",
+                    selected = type == TransactionType.TRANSFER,
+                    selectedColor = Color(0xFF2563EB),
+                    onClick = {
+                        type = TransactionType.TRANSFER
+                        selectedCategory = DefaultCategories.transferCategories.first().name
+                    },
+                    modifier = Modifier.weight(1f),
+                    tag = "type_transfer_btn"
                 )
             }
 

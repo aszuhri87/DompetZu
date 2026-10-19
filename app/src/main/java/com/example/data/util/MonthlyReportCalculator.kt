@@ -46,8 +46,14 @@ object MonthlyReportCalculator {
     ): MonthlyReportData {
         val monthTitle = "${getMonthName(month)} $year"
 
-        val incomeTransactions = currentTransactions.filter { it.type == TransactionType.INCOME.name }
-        val expenseTransactions = currentTransactions.filter { it.type == TransactionType.EXPENSE.name }
+        val incomeTransactions = currentTransactions.filter { 
+            it.type == TransactionType.INCOME.name || 
+            (it.type == TransactionType.TRANSFER.name && it.category.contains("Masuk", ignoreCase = true))
+        }
+        val expenseTransactions = currentTransactions.filter { 
+            it.type == TransactionType.EXPENSE.name && 
+            !it.category.contains("Transfer", ignoreCase = true)
+        }
 
         val totalIncome = incomeTransactions.sumOf { it.amount }
         val totalExpense = expenseTransactions.sumOf { it.amount }
@@ -67,9 +73,11 @@ object MonthlyReportCalculator {
             0.0
         }
 
-        // Category Summaries
+        // Category Summaries (Excluding any Transfer categories from expense summaries & donut chart)
         val budgetsMap = budgets.associateBy { it.category }
-        val expensesByCategory = expenseTransactions.groupBy { it.category }
+        val expensesByCategory = expenseTransactions
+            .filterNot { it.category.contains("Transfer", ignoreCase = true) }
+            .groupBy { it.category }
 
         val categorySummaries = expensesByCategory.map { (catName, txList) ->
             val catTotal = txList.sumOf { it.amount }

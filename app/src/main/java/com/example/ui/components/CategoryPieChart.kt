@@ -82,13 +82,17 @@ fun CategoryDistributionPieChart(
     onNavigateToReport: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val displayCategories = remember(categories) {
+        categories.filterNot { it.categoryName.contains("Transfer", ignoreCase = true) }
+    }
+
     var selectedCategoryIndex by remember { mutableStateOf<Int?>(null) }
     var animationTarget by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(categories) {
+    LaunchedEffect(displayCategories) {
         animationTarget = 0f
         animationTarget = 1f
-        if (selectedCategoryIndex != null && selectedCategoryIndex!! >= categories.size) {
+        if (selectedCategoryIndex != null && selectedCategoryIndex!! >= displayCategories.size) {
             selectedCategoryIndex = null
         }
     }
@@ -153,9 +157,9 @@ fun CategoryDistributionPieChart(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            val safeTotalExpense = if (totalExpense > 0.0 && !totalExpense.isNaN() && !totalExpense.isInfinite()) totalExpense else 0.0
+            val safeTotalExpense = displayCategories.sumOf { it.totalAmount.coerceAtLeast(0.0) }
 
-            if (categories.isEmpty() || safeTotalExpense <= 0.0) {
+            if (displayCategories.isEmpty() || safeTotalExpense <= 0.0) {
                 // Empty state donut placeholder
                 Box(
                     modifier = Modifier
@@ -188,7 +192,7 @@ fun CategoryDistributionPieChart(
                 }
             } else {
                 // Interactive Donut Chart Container
-                val selectedItem = selectedCategoryIndex?.let { categories.getOrNull(it) }
+                val selectedItem = selectedCategoryIndex?.let { displayCategories.getOrNull(it) }
 
                 Box(
                     modifier = Modifier
@@ -200,7 +204,7 @@ fun CategoryDistributionPieChart(
                         modifier = Modifier
                             .size(220.dp)
                             .testTag("donut_chart_canvas")
-                            .pointerInput(categories, safeTotalExpense) {
+                            .pointerInput(displayCategories, safeTotalExpense) {
                                 detectTapGestures { tapOffset ->
                                     val center = Offset(size.width / 2f, size.height / 2f)
                                     val dx = tapOffset.x - center.x
@@ -215,8 +219,8 @@ fun CategoryDistributionPieChart(
 
                                         var currentStartAngle = 0f
                                         var tappedIdx: Int? = null
-                                        for (i in categories.indices) {
-                                            val catAmt = categories[i].totalAmount.coerceAtLeast(0.0)
+                                        for (i in displayCategories.indices) {
+                                            val catAmt = displayCategories[i].totalAmount.coerceAtLeast(0.0)
                                             val sweep = ((catAmt / safeTotalExpense) * 360.0).toFloat()
                                             if (angle >= currentStartAngle && angle < currentStartAngle + sweep) {
                                                 tappedIdx = i
@@ -244,7 +248,7 @@ fun CategoryDistributionPieChart(
 
                         val animFactor = progressAnim.coerceIn(0f, 1f)
 
-                        categories.forEachIndexed { index, cat ->
+                        displayCategories.forEachIndexed { index, cat ->
                             val catAmt = if (cat.totalAmount > 0 && !cat.totalAmount.isNaN()) cat.totalAmount else 0.0
                             val ratio = if (safeTotalExpense > 0.0) (catAmt / safeTotalExpense) else 0.0
                             val sweepAngle = (ratio * 360.0 * animFactor).toFloat().coerceIn(0f, 360f)
@@ -265,7 +269,7 @@ fun CategoryDistributionPieChart(
                             }
 
                             val currentStroke = if (isSelected) strokeWidthSelected else strokeWidthNormal
-                            val gap = if (categories.size > 1 && sweepAngle > 4f) 2f else 0f
+                            val gap = if (displayCategories.size > 1 && sweepAngle > 4f) 2f else 0f
                             val actualSweep = (sweepAngle - gap).coerceAtLeast(0.5f)
 
                             if (actualSweep > 0.1f && !actualSweep.isNaN() && !startAngle.isNaN()) {
@@ -344,7 +348,7 @@ fun CategoryDistributionPieChart(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "${categories.size} Kategori",
+                                text = "${displayCategories.size} Kategori",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -365,7 +369,7 @@ fun CategoryDistributionPieChart(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    categories.forEachIndexed { index, cat ->
+                    displayCategories.forEachIndexed { index, cat ->
                         val isSelected = selectedCategoryIndex == index
                         val sliceColor = if (cat.colorHex != 0L) {
                             Color(cat.colorHex)

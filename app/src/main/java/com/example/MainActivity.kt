@@ -77,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -112,7 +113,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-            val useDarkTheme = themeMode == ThemeMode.DARK
+            val useDarkTheme = when (themeMode) {
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
             DompetKuTheme(darkTheme = useDarkTheme) {
                 MainApp(viewModel = viewModel)
             }
@@ -137,6 +142,11 @@ fun MainApp(
     val isLockEnabled by viewModel.isLockEnabled.collectAsStateWithLifecycle()
     val isAmountHidden by viewModel.isAmountHidden.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
     val showSecurityDialog by viewModel.showSecurityDialog.collectAsStateWithLifecycle()
 
     val currentTab by viewModel.currentTab.collectAsStateWithLifecycle()
@@ -182,7 +192,58 @@ fun MainApp(
     val showSavingsGoalDialog by viewModel.showSavingsGoalDialog.collectAsStateWithLifecycle()
     val editingSavingsGoal by viewModel.editingSavingsGoal.collectAsStateWithLifecycle()
 
+    val liveGoldPrice by viewModel.liveGoldPrice.collectAsStateWithLifecycle()
+    val liveGoldPriceChange by viewModel.liveGoldPriceChange.collectAsStateWithLifecycle()
+    val liveGoldPriceChangePercent by viewModel.liveGoldPriceChangePercent.collectAsStateWithLifecycle()
+    val liveGoldLastUpdated by viewModel.liveGoldLastUpdated.collectAsStateWithLifecycle()
+    val liveGoldSourceName by viewModel.liveGoldSourceName.collectAsStateWithLifecycle()
+    val isRefreshingGoldPrice by viewModel.isRefreshingGoldPrice.collectAsStateWithLifecycle()
+
+    val showTransferDialog by viewModel.showTransferDialog.collectAsStateWithLifecycle()
+    val transferSourceWallet by viewModel.transferSourceWallet.collectAsStateWithLifecycle()
+
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val context = LocalContext.current
+
+    val exportBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            viewModel.exportBackupData { jsonString ->
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        outputStream.write(jsonString.toByteArray())
+                    }
+                    android.widget.Toast.makeText(context, "Cadangan data berhasil diekspor!", android.widget.Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "Gagal menyimpan file cadangan.", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val importBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val jsonString = inputStream?.bufferedReader()?.use { it.readText() }
+                if (jsonString != null) {
+                    viewModel.importBackupData(jsonString) { success ->
+                        if (success) {
+                            android.widget.Toast.makeText(context, "Data keuangan berhasil dipulihkan!", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            android.widget.Toast.makeText(context, "Gagal memulihkan cadangan. Format file salah.", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Terjadi kesalahan membaca file.", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     // Notification Permission Launcher for Android 13+ (API 33+)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -230,7 +291,7 @@ fun MainApp(
         topBar = {
             TopAppBar(
                 title = {
-                    DompetZuHeaderLogo(isDarkTheme = (themeMode == ThemeMode.DARK))
+                    DompetZuHeaderLogo(isDarkTheme = useDarkTheme)
                 },
                 actions = {
                     // Global Amount Visibility Toggle (Eye icon)
@@ -250,9 +311,8 @@ fun MainApp(
                         onClick = { viewModel.toggleNextThemeMode() },
                         modifier = Modifier.testTag("theme_mode_toggle_topbar")
                     ) {
-                        val isDark = themeMode == ThemeMode.DARK
-                        val icon = if (isDark) Icons.Default.DarkMode else Icons.Default.LightMode
-                        val label = if (isDark) "Mode Gelap (🌙)" else "Mode Terang (☀️)"
+                        val icon = if (useDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode
+                        val label = if (useDarkTheme) "Mode Gelap (🌙)" else "Mode Terang (☀️)"
                         Icon(
                             imageVector = icon,
                             contentDescription = label,
@@ -361,6 +421,7 @@ fun MainApp(
                     onTransactionClick = { viewModel.openEditTransaction(it) },
                     onAddWallet = { viewModel.openAddWallet() },
                     onEditWallet = { walletName -> viewModel.openEditWalletByName(walletName) },
+                    onTransferFund = { source -> viewModel.openTransferDialog(source) },
                     onPreviousMonth = { viewModel.previousMonth() },
                     onNextMonth = { viewModel.nextMonth() },
                     modifier = contentModifier
@@ -398,6 +459,14 @@ fun MainApp(
                     budgets = currentMonthBudgets,
                     bills = allBills,
                     savingsGoals = allSavingsGoals,
+                    liveGoldPrice = liveGoldPrice,
+                    liveGoldPriceChange = liveGoldPriceChange,
+                    liveGoldPriceChangePercent = liveGoldPriceChangePercent,
+                    liveGoldLastUpdated = liveGoldLastUpdated,
+                    liveGoldSourceName = liveGoldSourceName,
+                    isRefreshingGoldPrice = isRefreshingGoldPrice,
+                    onRefreshGoldPrice = { viewModel.refreshLiveGoldPrice() },
+                    onSetCustomGoldPrice = { viewModel.setCustomGoldPrice(it) },
                     onAddBudget = { viewModel.openAddBudget() },
                     onEditBudget = { viewModel.openEditBudget(it) },
                     onDeleteBudget = { viewModel.deleteBudget(it) },
@@ -461,6 +530,7 @@ fun MainApp(
         if (showBillDialog) {
             AddEditRecurringBillDialog(
                 bill = editingBill,
+                availableWallets = allAccounts.map { it.name },
                 onDismiss = { viewModel.closeBillDialog() },
                 onSave = { title, amount, category, wallet, dueDay, freq, reminder, note ->
                     viewModel.saveBill(title, amount, category, wallet, dueDay, freq, reminder, note)
@@ -508,6 +578,14 @@ fun MainApp(
                 onLockNow = {
                     viewModel.closeSecurityDialog()
                     viewModel.lockApp()
+                },
+                onBackupClick = {
+                    viewModel.closeSecurityDialog()
+                    exportBackupLauncher.launch("dompetzu_backup.json")
+                },
+                onRestoreClick = {
+                    viewModel.closeSecurityDialog()
+                    importBackupLauncher.launch("application/json")
                 }
             )
         }
@@ -517,12 +595,25 @@ fun MainApp(
             AddEditWalletDialog(
                 existingAccount = editingAccount,
                 currentLiveBalance = editingAccountLiveBalance,
+                allWallets = walletBalances,
                 onDismiss = { viewModel.closeWalletDialog() },
-                onSaveAccount = { name, type, balance, colorHex, iconKey, clearTx ->
-                    viewModel.saveWallet(name, type, balance, colorHex, iconKey, clearTx)
+                onSaveAccount = { name, type, balance, colorHex, iconKey, clearTx, sourceWallet ->
+                    viewModel.saveWallet(name, type, balance, colorHex, iconKey, clearTx, sourceWallet)
                 },
                 onDeleteAccount = { accountId ->
                     viewModel.deleteWallet(accountId)
+                }
+            )
+        }
+
+        // Transfer Fund Dialog
+        if (showTransferDialog) {
+            com.example.ui.screens.TransferFundDialog(
+                wallets = walletBalances,
+                preselectedSource = transferSourceWallet,
+                onDismiss = { viewModel.closeTransferDialog() },
+                onTransfer = { source, target, amount, note ->
+                    viewModel.transferFunds(source, target, amount, note)
                 }
             )
         }
@@ -543,6 +634,10 @@ fun MainApp(
         if (showSavingsGoalDialog) {
             AddEditSavingsGoalDialog(
                 goal = editingSavingsGoal,
+                liveMarketPrice = liveGoldPrice,
+                liveMarketLastUpdated = liveGoldLastUpdated,
+                isRefreshingMarketPrice = isRefreshingGoldPrice,
+                onRefreshMarketPrice = { viewModel.refreshLiveGoldPrice() },
                 onDismiss = { viewModel.closeSavingsGoalDialog() },
                 onSave = { title, target, current, category, date, note ->
                     viewModel.saveSavingsGoal(title, target, current, category, date, note)

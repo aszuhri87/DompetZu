@@ -171,6 +171,18 @@ fun TransactionsScreen(
                                     )
                                 )
                             }
+                            item {
+                                FilterChip(
+                                    selected = filterType == "TRANSFER",
+                                    onClick = { onFilterChange("TRANSFER") },
+                                    label = { Text("Transfer", fontSize = 12.sp) },
+                                    modifier = Modifier.testTag("filter_transfer"),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFF2563EB).copy(alpha = 0.2f),
+                                        selectedLabelColor = Color(0xFF2563EB)
+                                    )
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
@@ -216,6 +228,7 @@ fun TransactionsScreen(
                     // Filter Summary Line
                     val totalIn = transactions.filter { it.type == TransactionType.INCOME.name }.sumOf { it.amount }
                     val totalOut = transactions.filter { it.type == TransactionType.EXPENSE.name }.sumOf { it.amount }
+                    val totalTransfer = transactions.filter { it.type == TransactionType.TRANSFER.name || it.category.contains("Transfer", ignoreCase = true) }.sumOf { it.amount }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -229,7 +242,11 @@ fun TransactionsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "+${MonthlyReportCalculator.formatNominal(totalIn, isAmountHidden)}  |  -${MonthlyReportCalculator.formatNominal(totalOut, isAmountHidden)}",
+                            text = if (filterType == "TRANSFER") {
+                                "Total Transfer: ${MonthlyReportCalculator.formatNominal(totalTransfer, isAmountHidden)}"
+                            } else {
+                                "+${MonthlyReportCalculator.formatNominal(totalIn, isAmountHidden)}  |  -${MonthlyReportCalculator.formatNominal(totalOut, isAmountHidden)}"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

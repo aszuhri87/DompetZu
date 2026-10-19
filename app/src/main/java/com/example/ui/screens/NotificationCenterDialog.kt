@@ -210,7 +210,7 @@ fun NotificationCenterDialog(
                             Text(
                                 text = "Peringatan anggaran & pengingat tagihan akan muncul di sini.",
                                 fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.outline
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -355,8 +355,9 @@ fun NotificationItemCard(
                     ) {
                         Text(
                             text = timeFormatted,
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.outline
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {

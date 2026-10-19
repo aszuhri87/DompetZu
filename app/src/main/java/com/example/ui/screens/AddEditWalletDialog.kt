@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Switch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Button
@@ -60,13 +65,16 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.AccountEntity
 import com.example.data.util.MonthlyReportCalculator
 import com.example.ui.theme.ExpenseRed
+import com.example.ui.viewmodel.WalletBalance
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddEditWalletDialog(
     existingAccount: AccountEntity?,
     currentLiveBalance: Double = 0.0,
+    allWallets: List<WalletBalance> = emptyList(),
     onDismiss: () -> Unit,
-    onSaveAccount: (name: String, type: String, balance: Double, colorHex: Long, iconKey: String, clearTransactions: Boolean) -> Unit,
+    onSaveAccount: (name: String, type: String, balance: Double, colorHex: Long, iconKey: String, clearTransactions: Boolean, sourceWalletToDeduct: String?) -> Unit,
     onDeleteAccount: ((Long) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -80,6 +88,16 @@ fun AddEditWalletDialog(
             ""
         }
         mutableStateOf(if (initialVal == "0") "" else initialVal)
+    }
+
+    val otherWallets = remember(allWallets, existingAccount) {
+        allWallets.filter {
+            existingAccount == null || !it.walletName.equals(existingAccount.name, ignoreCase = true)
+        }
+    }
+    var takeFromOtherWallet by remember { mutableStateOf(false) }
+    var selectedSourceWallet by remember(otherWallets) {
+        mutableStateOf(otherWallets.firstOrNull()?.walletName ?: "")
     }
 
     var selectedType by remember { mutableStateOf(existingAccount?.type ?: "BANK") }
@@ -225,7 +243,8 @@ fun AddEditWalletDialog(
                     items(quickAddAmounts) { (label, amount) ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
@@ -236,15 +255,92 @@ fun AddEditWalletDialog(
                             Text(
                                 text = label,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Ambil Saldo Dari Dompet Lain
+                if (otherWallets.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (takeFromOtherWallet) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.SwapHoriz,
+                                        contentDescription = null,
+                                        tint = if (takeFromOtherWallet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Ambil dari Dompet Lain",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (takeFromOtherWallet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Switch(
+                                    checked = takeFromOtherWallet,
+                                    onCheckedChange = { takeFromOtherWallet = it }
+                                )
+                            }
+
+                            if (takeFromOtherWallet) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Pilih dompet asal yang akan dipotong saldonya:",
+                                    fontSize = 10.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    otherWallets.forEach { w ->
+                                        val isSelected = w.walletName.equals(selectedSourceWallet, ignoreCase = true)
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                            border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)) else null,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { selectedSourceWallet = w.walletName }
+                                        ) {
+                                            Text(
+                                                text = "${w.walletName} (${MonthlyReportCalculator.formatRupiah(w.balance)})",
+                                                fontSize = 10.5.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
 
                 Text(
                     text = "Tipe Dompet",
@@ -257,32 +353,34 @@ fun AddEditWalletDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    types.chunked(3).forEach { chunk ->
+                    types.chunked(2).forEach { chunk ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             chunk.forEach { (typeKey, typeLabel, _) ->
                                 val isSelected = selectedType == typeKey
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                    border = if (!isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)) else null,
+                                    shadowElevation = if (isSelected) 1.dp else 0.dp,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
+                                        .clip(RoundedCornerShape(10.dp))
                                         .clickable { selectedType = typeKey }
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(vertical = 8.dp, horizontal = 2.dp),
+                                            .padding(vertical = 9.dp, horizontal = 8.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = typeLabel,
-                                            fontSize = 11.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                             maxLines = 1,
                                             textAlign = TextAlign.Center
                                         )
@@ -364,7 +462,8 @@ fun AddEditWalletDialog(
                             parsedBalance,
                             selectedColor,
                             iconKey,
-                            clearTransactionsChecked
+                            clearTransactionsChecked,
+                            if (takeFromOtherWallet && selectedSourceWallet.isNotBlank() && parsedBalance > 0) selectedSourceWallet else null
                         )
                         Toast.makeText(context, "Dompet berhasil disimpan", Toast.LENGTH_SHORT).show()
                         onDismiss()
@@ -372,21 +471,31 @@ fun AddEditWalletDialog(
                         Toast.makeText(context, "Nama dompet tidak boleh kosong", Toast.LENGTH_SHORT).show()
                     }
                 },
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.testTag("save_wallet_button")
             ) {
-                Text(if (existingAccount == null) "Tambah Dompet" else "Simpan Perubahan")
+                Text(if (existingAccount == null) "Tambah Dompet" else "Simpan Perubahan", fontWeight = FontWeight.Bold)
             }
         },
-        dismissButton = if (existingAccount != null && onDeleteAccount != null) {
-            {
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (existingAccount != null && onDeleteAccount != null) {
+                    TextButton(
+                        onClick = { showConfirmDeleteDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.textButtonColors(contentColor = ExpenseRed)
+                    ) {
+                        Text("Hapus")
+                    }
+                }
                 TextButton(
-                    onClick = { showConfirmDeleteDialog = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = ExpenseRed)
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Hapus")
+                    Text("Batal")
                 }
             }
-        } else null
+        }
     )
 
     // Confirmation dialog for deleting wallet

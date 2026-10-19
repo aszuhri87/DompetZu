@@ -2,7 +2,9 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -775,6 +777,7 @@ fun MonthlySavingsBanner(
     report: MonthlyReportData,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val net = report.netCashFlow
     val formattedAbs = MonthlyReportCalculator.formatRupiah(kotlin.math.abs(net))
     val formattedIncome = MonthlyReportCalculator.formatRupiah(report.totalIncome)
@@ -783,81 +786,215 @@ fun MonthlySavingsBanner(
     val isSurplus = net > 0
     val isDeficit = net < 0
 
+    val badgeLabel = when {
+        isSurplus -> "🟢 SURPLUS BULAN INI"
+        isDeficit -> "🔴 DEFISIT BULAN INI"
+        else -> "⚖️ ARUS KAS SEIMBANG"
+    }
+
     val titleText = when {
-        isSurplus -> "Yay! Anda berhasil menabung $formattedAbs bulan ini! 🎉"
-        isDeficit -> "Perhatian: Pengeluaran Anda melebihi pemasukan sebesar $formattedAbs bulan ini. ⚠️"
-        else -> "Saldo Pas: Pemasukan dan pengeluaran Anda seimbang pas bulan ini (Rp 0). ⚖️"
+        isSurplus -> "Yay! Berhasil Menabung $formattedAbs 🎉"
+        isDeficit -> "Perhatian: Defisit $formattedAbs Bulan Ini"
+        else -> "Saldo Pas: Pemasukan & Pengeluaran Seimbang"
     }
 
     val subtitleText = when {
-        isSurplus -> "Sisa saldo dari total pemasukan ($formattedIncome) dikurangi pengeluaran ($formattedExpense)."
-        isDeficit -> "Total pengeluaran ($formattedExpense) lebih besar dari total pemasukan ($formattedIncome) bulan ini."
-        else -> "Total pemasukan ($formattedIncome) sama dengan total pengeluaran ($formattedExpense) bulan ini."
+        isSurplus -> "Sisa saldo bersih dari total pemasukan ($formattedIncome) dikurangi pengeluaran ($formattedExpense)."
+        isDeficit -> "Total pengeluaran ($formattedExpense) melebihi pemasukan ($formattedIncome) bulan ini."
+        else -> "Total pemasukan ($formattedIncome) dan pengeluaran ($formattedExpense) seimbang pas bulan ini (Rp 0)."
     }
 
-    val containerBg = when {
-        isSurplus -> IncomeGreen.copy(alpha = 0.12f)
-        isDeficit -> ExpenseRed.copy(alpha = 0.12f)
-        else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
-    }
-
-    val contentColor = when {
+    val statusColor = when {
         isSurplus -> IncomeGreen
         isDeficit -> ExpenseRed
-        else -> MaterialTheme.colorScheme.primary
+        else -> if (isDark) Color(0xFF60A5FA) else Color(0xFF0284C7)
     }
 
-    val icon = when {
-        isSurplus -> Icons.Default.CheckCircle
-        isDeficit -> Icons.Default.Warning
-        else -> Icons.Default.Info
+    val bannerBg = when {
+        isSurplus -> if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+        isDeficit -> if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.35f) else Color(0xFFFEF2F2)
+        else -> if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF0F9FF)
     }
+
+    val bannerBorder = when {
+        isSurplus -> BorderStroke(1.2.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFFA7F3D0))
+        isDeficit -> BorderStroke(1.2.dp, if (isDark) Color(0xFFEF4444).copy(alpha = 0.5f) else Color(0xFFFECACA))
+        else -> BorderStroke(1.2.dp, if (isDark) Color(0xFF3B82F6).copy(alpha = 0.5f) else Color(0xFFBAE6FD))
+    }
+
+    val titleColor = if (isDark) Color.White else Color(0xFF0F172A)
+    val bodyColor = if (isDark) Color(0xFFCBD5E1) else Color(0xFF334155)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .testTag("monthly_savings_banner"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, contentColor.copy(alpha = 0.35f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = bannerBg),
+        border = bannerBorder,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(containerBg),
-                contentAlignment = Alignment.Center
+            // Header Row (Badge + Net Amount Pill)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = statusColor.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, statusColor.copy(alpha = 0.25f))
+                ) {
+                    Text(
+                        text = badgeLabel,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                Text(
+                    text = if (isSurplus) "+$formattedAbs" else if (isDeficit) "-$formattedAbs" else "Rp 0",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = statusColor
                 )
             }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = titleText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = subtitleText,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Main Message Header
+            Text(
+                text = titleText,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = titleColor
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = subtitleText,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = bodyColor,
+                lineHeight = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Mini Comparison Metric Chips (Pemasukan vs Pengeluaran vs Net Flow)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Income Chip
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF0F172A).copy(alpha = 0.6f) else Color.White,
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                tint = IncomeGreen,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Pemasukan",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = bodyColor
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = formattedIncome,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = titleColor,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // Expense Chip
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF0F172A).copy(alpha = 0.6f) else Color.White,
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
+                                contentDescription = null,
+                                tint = ExpenseRed,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Pengeluaran",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = bodyColor
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = formattedExpense,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = titleColor,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                // Net Cashflow Chip
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF0F172A).copy(alpha = 0.6f) else Color.White,
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = statusColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = "Sisa Net",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = bodyColor
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isSurplus) "+$formattedAbs" else if (isDeficit) "-$formattedAbs" else "Rp 0",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
     }
